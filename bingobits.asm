@@ -17,6 +17,7 @@ section .data
     new_card_msg    db "A new BINGO card has been generated!", 10, 0
     cmd_start       db "> ", 0
     invalid_msg     db "Invalid command! Type 'help' to see all the commands available.", 10, 0
+    win_msg         db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
     exit_msg        db "Thank you for playing! ^-^", 10, 0
 
     str_help        db "help", 0
@@ -36,7 +37,6 @@ section .data
 
 section .bss
     input               resb 20
-    confirm             resb 2
     mark_coordinates    resb 4
 
 section .text
@@ -47,6 +47,21 @@ section .text
     extern srand
 
 main:
+    push ebp
+    mov ebp, esp
+
+    ; Initialize random seed
+    push 0
+    call time
+    add esp, 4
+
+    push eax
+    call srand
+    add esp, 4
+
+    ; Initialize helper systems
+    call init_card_generator
+    
     ; Print intro
     push dword intro
     call printf
@@ -146,35 +161,22 @@ cmd_help:
     add esp, 4
     jmp input_loop
 
-cmd_new:
-    push ebp
-    mov ebp, esp
-    
-    ; Initialize with time seed
-    push 0
-    call time
+cmd_new:    
+    ; print new card message
+    push dword new_card_msg
+    call printf
     add esp, 4
 
-    push eax
-    call srand
-    add esp, 4
-    
-    call init_card_generator
     call generate_bingo_card
     call display_bingo_card
-    
-    ; Return 0
-    mov eax, 0
-    mov esp, ebp
-    pop ebp
+
+    ; initialize marker here
 
     jmp input_loop
 
 cmd_card:
     ; TODO
-    push dword in_progress
-    call printf
-    add esp, 4
+    call display_bingo_card
     jmp input_loop
 
 cmd_call:
@@ -217,7 +219,11 @@ exit:
     call printf
     add esp, 4
 
+    ; Exit
     mov eax, 0
+    mov esp, ebp
+    pop ebp
+
     ret
 
 ;----------------------------------------------------

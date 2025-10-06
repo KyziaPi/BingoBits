@@ -27,10 +27,6 @@ section .data
     free_fmt db "FREE ", 0
     newline_fmt db 10, 0
     separator_fmt db "+----+----+----+----+----+", 10, 0
-    card_title_fmt db "BINGO CARD", 10, 0
-    
-    ; Random seed for standalone testing
-    seed dd 1
 
 section .bss
     ; BINGO card storage (5x5 grid)
@@ -52,8 +48,6 @@ section .bss
 
 section .text
     extern printf
-    extern time
-    extern srand
     extern rand
     global generate_bingo_card
     global display_bingo_card
@@ -515,11 +509,6 @@ get_card_array:
 
 display_bingo_card:
     ; Display the BINGO card using printf
-    
-    ; Print card title
-    push card_title_fmt
-    call printf
-    add esp, 4
     
     ; Print separator
     push separator_fmt  
