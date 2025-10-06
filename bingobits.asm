@@ -6,16 +6,7 @@
 ; nasm -f elf32 number_caller.asm -o number_caller.o
 ; nasm -f elf32 card_marker.asm -o card_marker.o
 ;
-; gcc -m32 -no-pie bingobits.o bingo_card.o number_caller.o card_marker.asm -o bingobits
-; ./bingobits
-;
-; TEMPORARY
-; nasm -f elf32 bingobits.asm -o bingobits.o;
-; assemble:
-; nasm -f elf32 bingobits.asm -o bingobits.o
-; link:
-; gcc -m32 -no-pie bingobits.o -o bingobits
-; run:
+; gcc -m32 -no-pie bingobits.o card_generator.o number_caller.o card_marker.o -o bingobits
 ; ./bingobits
 ;
 
@@ -51,6 +42,9 @@ section .bss
 section .text
     global main
     extern printf, scanf
+    extern init_card_generator, generate_bingo_card, display_bingo_card
+    extern time
+    extern srand
 
 main:
     ; Print intro
@@ -153,10 +147,27 @@ cmd_help:
     jmp input_loop
 
 cmd_new:
-    ; TODO
-    push dword in_progress
-    call printf
+    push ebp
+    mov ebp, esp
+    
+    ; Initialize with time seed
+    push 0
+    call time
     add esp, 4
+
+    push eax
+    call srand
+    add esp, 4
+    
+    call init_card_generator
+    call generate_bingo_card
+    call display_bingo_card
+    
+    ; Return 0
+    mov eax, 0
+    mov esp, ebp
+    pop ebp
+
     jmp input_loop
 
 cmd_card:
