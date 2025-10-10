@@ -27,6 +27,9 @@ section .data
     free_fmt db "FREE ", 0
     newline_fmt db 10, 0
     separator_fmt db "+----+----+----+----+----+", 10, 0
+    
+    ; Random seed for standalone testing
+    seed dd 1
 
 section .bss
     ; BINGO card storage (5x5 grid)
@@ -56,7 +59,7 @@ section .text
     global is_valid_card
     global get_card_array
     global bingo_card
-    global main
+
 
 init_card_generator:
     ; Initialize card generator system
@@ -69,62 +72,69 @@ init_column_arrays:
     ; Initialize B column (1-15)
     mov ecx, 15
     mov edi, b_numbers
-    mov eax, B_MIN
+    mov al, B_MIN
 init_b_loop:
     mov [edi], al
     inc edi
-    inc eax
-    loop init_b_loop
+    inc al
+    dec ecx
+    jnz init_b_loop
     mov dword [b_count], 15
     
     ; Initialize I column (16-30)  
     mov ecx, 15
     mov edi, i_numbers
-    mov eax, I_MIN
+    mov al, I_MIN
 init_i_loop:
     mov [edi], al
     inc edi
-    inc eax
-    loop init_i_loop
+    inc al
+    dec ecx
+    jnz init_i_loop
     mov dword [i_count], 15
     
     ; Initialize N column (31-45)
     mov ecx, 15
     mov edi, n_numbers
-    mov eax, N_MIN
+    mov al, N_MIN
 init_n_loop:
     mov [edi], al
     inc edi
-    inc eax
-    loop init_n_loop
+    inc al
+    dec ecx
+    jnz init_n_loop
     mov dword [n_count], 15
     
     ; Initialize G column (46-60)
     mov ecx, 15
     mov edi, g_numbers
-    mov eax, G_MIN
+    mov al, G_MIN
 init_g_loop:
     mov [edi], al
     inc edi
-    inc eax
-    loop init_g_loop
+    inc al
+    dec ecx
+    jnz init_g_loop
     mov dword [g_count], 15
     
     ; Initialize O column (61-75)
     mov ecx, 15
     mov edi, o_numbers
-    mov eax, O_MIN
+    mov al, O_MIN
 init_o_loop:
     mov [edi], al
     inc edi
-    inc eax
-    loop init_o_loop
+    inc al
+    dec ecx
+    jnz init_o_loop
     mov dword [o_count], 15
     
     ret
 
 generate_bingo_card:
     ; Generate each column of the BINGO card
+    ; IMPORTANT: Reinitialize the number pools first
+    call init_column_arrays
     
     ; Generate B column (column 0)
     mov esi, 0                  ; Column index
@@ -155,15 +165,20 @@ generate_column:
     ; Generate 5 numbers for column esi
     ; esi = column index (0-4)
     
-    push esi
+    push ebx
+    push ecx
+    push edx
+    push edi
+    push esi                    ; save column index
+    
     mov ecx, 5                  ; 5 numbers per column
-    mov edi, 0                  ; Row index
+    xor edi, edi                  ; Row index
     
 gen_col_loop:
     push ecx
     push edi
     
-    ; Get random number for this column
+    ; Get random number for this column (esi is column index)
     call get_random_for_column
     
     ; Store in card array: card[row][col] = card[row*5 + col]
@@ -178,11 +193,20 @@ gen_col_loop:
     loop gen_col_loop
     
     pop esi
+    pop edi
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
 get_random_for_column:
     ; Get random number for column esi, remove it from available pool
+    ; esi = column index (0-4)
     ; Returns number in eax
+    push ebx
+    push ecx
+    push edx
+    push esi
     
     cmp esi, 0
     je get_b_number
@@ -196,59 +220,85 @@ get_random_for_column:
 
 get_b_number:
     mov eax, [b_count]
+    test eax, eax               ; Check if count is 0
+    jz get_random_error
+    
     call simple_random
     xor edx, edx
-    div eax                    ; Random index in available B numbers
-    mov edx, edx
+    mov ebx, [b_count]
+    div ebx                     ; edx = random index
     
     movzx eax, byte [b_numbers + edx]  ; Get the number
     
     ; Remove this number from available pool
     call remove_from_b_pool
-    ret
+    jmp get_random_done
 
 get_i_number:
     mov eax, [i_count]
+    test eax, eax
+    jz get_random_error
+    
     call simple_random
     xor edx, edx
-    div eax
-    mov edx, edx
+    mov ebx, [i_count]
+    div ebx
     
     movzx eax, byte [i_numbers + edx]
     call remove_from_i_pool
-    ret
+    jmp get_random_done
 
 get_n_number:
     mov eax, [n_count]
+    test eax, eax
+    jz get_random_error
+    
     call simple_random
     xor edx, edx
-    div eax
-    mov edx, edx
+    mov ebx, [n_count]
+    div ebx
     
     movzx eax, byte [n_numbers + edx]
     call remove_from_n_pool
-    ret
+    jmp get_random_done
 
 get_g_number:
     mov eax, [g_count]
+    test eax, eax
+    jz get_random_error
+    
     call simple_random
     xor edx, edx
-    div eax
-    mov edx, edx
+    mov ebx, [g_count]
+    div ebx
     
     movzx eax, byte [g_numbers + edx]
     call remove_from_g_pool
-    ret
+    jmp get_random_done
 
 get_o_number:
     mov eax, [o_count]
+    test eax, eax
+    jz get_random_error
+    
     call simple_random
     xor edx, edx
-    div eax
-    mov edx, edx
+    mov ebx, [o_count]
+    div ebx
     
     movzx eax, byte [o_numbers + edx]
     call remove_from_o_pool
+    jmp get_random_done
+
+get_random_error:
+    ; Should never happen if logic is correct
+    mov eax, 0
+    
+get_random_done:
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
 simple_random:
@@ -258,6 +308,11 @@ simple_random:
 
 remove_from_b_pool:
     ; Remove number at index edx from B pool
+    push eax
+    push ecx
+    push esi
+    push edi
+    
     mov ecx, [b_count]
     dec ecx
     mov [b_count], ecx
@@ -266,19 +321,26 @@ remove_from_b_pool:
     cmp edx, ecx
     jge b_remove_done
     
-    mov esi, edx
-    inc esi
-    add esi, b_numbers
-    mov edi, edx
-    add edi, b_numbers
+    lea esi, [b_numbers + edx + 1]
+    lea edi, [b_numbers + edx]
     
+    mov ecx, [b_count]
     sub ecx, edx
     rep movsb
     
 b_remove_done:
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
     ret
 
 remove_from_i_pool:
+    push eax
+    push ecx
+    push esi
+    push edi
+    
     mov ecx, [i_count]
     dec ecx
     mov [i_count], ecx
@@ -286,19 +348,26 @@ remove_from_i_pool:
     cmp edx, ecx
     jge i_remove_done
     
-    mov esi, edx
-    inc esi
-    add esi, i_numbers
-    mov edi, edx
-    add edi, i_numbers
+    lea esi, [i_numbers + edx + 1]
+    lea edi, [i_numbers + edx]
     
+    mov ecx, [i_count]
     sub ecx, edx
     rep movsb
     
 i_remove_done:
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
     ret
 
 remove_from_n_pool:
+    push eax
+    push ecx
+    push esi
+    push edi
+    
     mov ecx, [n_count]
     dec ecx
     mov [n_count], ecx
@@ -306,19 +375,26 @@ remove_from_n_pool:
     cmp edx, ecx
     jge n_remove_done
     
-    mov esi, edx
-    inc esi
-    add esi, n_numbers
-    mov edi, edx
-    add edi, n_numbers
+    lea esi, [n_numbers + edx + 1]
+    lea edi, [n_numbers + edx]
     
+    mov ecx, [n_count]
     sub ecx, edx
     rep movsb
     
 n_remove_done:
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
     ret
 
 remove_from_g_pool:
+    push eax
+    push ecx
+    push esi
+    push edi
+    
     mov ecx, [g_count]
     dec ecx
     mov [g_count], ecx
@@ -326,19 +402,26 @@ remove_from_g_pool:
     cmp edx, ecx
     jge g_remove_done
     
-    mov esi, edx
-    inc esi
-    add esi, g_numbers
-    mov edi, edx
-    add edi, g_numbers
+    lea esi, [g_numbers + edx + 1]
+    lea edi, [g_numbers + edx]
     
+    mov ecx, [g_count]
     sub ecx, edx
     rep movsb
     
 g_remove_done:
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
     ret
 
 remove_from_o_pool:
+    push eax
+    push ecx
+    push esi
+    push edi
+    
     mov ecx, [o_count]
     dec ecx
     mov [o_count], ecx
@@ -346,16 +429,18 @@ remove_from_o_pool:
     cmp edx, ecx
     jge o_remove_done
     
-    mov esi, edx
-    inc esi
-    add esi, o_numbers
-    mov edi, edx
-    add edi, o_numbers
+    lea esi, [o_numbers + edx + 1]
+    lea edi, [o_numbers + edx]
     
+    mov ecx, [o_count]
     sub ecx, edx
     rep movsb
     
 o_remove_done:
+    pop edi
+    pop esi
+    pop ecx
+    pop eax
     ret
 
 get_card_number:
@@ -594,7 +679,7 @@ display_done:
     push newline_fmt
     call printf
     add esp, 4
-    
+
     ret
 
 section .note.GNU-stack noalloc noexec nowrite progbits

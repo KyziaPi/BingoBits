@@ -17,8 +17,11 @@ section .data
     new_card_msg    db "A new BINGO card has been generated!", 10, 0
     cmd_start       db "> ", 0
     invalid_msg     db "Invalid command! Type 'help' to see all the commands available.", 10, 0
+    not_win_msg     db 10, "You haven't hit BINGO yet, keep playing.", 10, 0
     win_msg         db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
     exit_msg        db "Thank you for playing! ^-^", 10, 0
+    marking_msg     db "Format: [row] [col]", 10, "Mark: ", 0
+    mark_error_msg  db 10, "INVALID INPUT: Row and column values should be integers within 1-5", 10, 0
 
     str_help        db "help", 0
     str_new         db "new", 0
@@ -31,13 +34,13 @@ section .data
     str_exit        db "exit", 0
 
     fmt_str         db "%19s", 0
-    fmt_int         db "%1d %1d", 0
+    fmt_int         db "%4d %4d", 0
 
     in_progress     db "This feature hasn't been implemented yet ^-^", 10, 0
 
 section .bss
     input               resb 20
-    mark_coordinates    resb 4
+    mark_coordinates    resb 8
 
 section .text
     global main
@@ -59,7 +62,6 @@ main:
     call srand
     add esp, 4
 
-    ; Initialize helper systems
     call init_card_generator
     
     ; Print intro
@@ -193,7 +195,57 @@ cmd_called:
     add esp, 4
     jmp input_loop
 
+mark_invalid:
+    ; print invalid mark win_msg
+    push dword mark_error_msg
+    call printf
+    add esp, 4
+
 cmd_mark:
+    ; print user to input coordinates
+    push dword marking_msg
+    call printf
+    add esp, 4
+
+    ; Scan coordinates input
+    lea eax, [mark_coordinates]
+    push dword eax
+    lea eax, [mark_coordinates + 4]
+    push dword eax
+    push dword fmt_int
+    call scanf
+    add esp, 12
+
+    ; [mark_coordinates] = row value
+    ; [mark_coordinates + 4] = col value
+
+    ; If coordinate = more than 1 digit
+    mov al, [mark_coordinates+1]
+    cmp al, 0
+    jne mark_invalid
+
+    mov al, [mark_coordinates+5]
+    cmp al, 0
+    jne mark_invalid
+
+    ; If coordinate = 1 digit but greater than 5
+    mov al, [mark_coordinates]
+    cmp al, 5
+    ja mark_invalid     ; greater than 5
+
+    mov al, [mark_coordinates+4]
+    cmp al, 5
+    ja mark_invalid     ; greater than 5
+
+    ; If coordinate = 1 digit but value is 0
+    mov al, [mark_coordinates]
+    cmp al, 0
+    je mark_invalid
+
+    mov al, [mark_coordinates+4]
+    cmp al, 0
+    je mark_invalid
+
     ; TODO
     push dword in_progress
     call printf
@@ -209,6 +261,15 @@ cmd_marked:
 
 cmd_bingo:
     ; TODO
+
+    ; LOGIC:
+    ; keep playing even if naachieve na BINGO, only stop if tinype mismo BINGO
+    ; and nameet niya yung BINGO condition
+
+    ; check if bingo function here
+    ; BINGO == TRUE, print win_msg
+    ; BINGO != TRUE, print not_win_msg
+
     push dword in_progress
     call printf
     add esp, 4
