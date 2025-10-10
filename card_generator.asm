@@ -495,14 +495,14 @@ validate_loop:
     je skip_center_validate
     
     ; Get number at this position
-    mov eax, [bingo_card + esi*4]
+    mov eax, dword [bingo_card + esi*4]
     
     ; Check range based on column
-    mov ebx, esi
-    mov ecx, 5
+    mov eax, esi
     xor edx, edx
+    mov ecx, 5
     div ecx                 ; eax = row, edx = col
-    mov eax, [bingo_card + esi*4]  ; Restore number
+    mov eax, dword [bingo_card + esi*4]  ; Restore number
     
     ; Check column range
     cmp edx, 0              ; B column
@@ -560,7 +560,7 @@ dup_loop:
     cmp edi, 12
     je skip_center_dup
     
-    cmp eax, [bingo_card + edi*4]
+    cmp eax, dword [bingo_card + edi*4]
     je card_invalid
     
 skip_center_dup:
@@ -577,7 +577,7 @@ card_valid:
     jmp validate_done
     
 card_invalid:
-    mov eax, 0
+    xor eax, eax
     
 validate_done:
     pop edi

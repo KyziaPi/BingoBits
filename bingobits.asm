@@ -11,17 +11,18 @@
 ;
 
 section .data
-    newline         db 10, 0
-    intro           db "Welcome to BingoBits!", 10, "Type 'help' to learn how to play", 10, 0
-    commands        db "Commands:", 10, "'help' - shows commands to play the game", 10, "'new' - generate a new board", 10, "'card' - display current card without marks", 10, "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 0
-    new_card_msg    db "A new BINGO card has been generated!", 10, 0
-    cmd_start       db "> ", 0
-    invalid_msg     db "Invalid command! Type 'help' to see all the commands available.", 10, 0
-    not_win_msg     db 10, "You haven't hit BINGO yet, keep playing.", 10, 0
-    win_msg         db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
-    exit_msg        db "Thank you for playing! ^-^", 10, 0
-    marking_msg     db "Format: [row] [col]", 10, "Mark: ", 0
-    mark_error_msg  db 10, "INVALID INPUT: Row and column values should be integers within 1-5", 10, 0
+    newline             db 10, 0
+    intro               db "Welcome to BingoBits!", 10, "Type 'help' to learn how to play", 10, 0
+    commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, "'new' - generate a new board", 10, "'card' - display current card without marks", 10, "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 0
+    new_card_msg        db "A new BINGO card has been generated!", 10, 0
+    cmd_start           db "> ", 0
+    invalid_msg         db "Invalid command! Type 'help' to see all the commands available.", 10, 0
+    not_win_msg         db 10, "You haven't hit BINGO yet, keep playing.", 10, 0
+    win_msg             db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
+    exit_msg            db "Thank you for playing! ^-^", 10, 0
+    marking_msg         db "Format: [row] [col]", 10, "Mark: ", 0
+    mark_error_msg      db 10, "INVALID INPUT: Row and column values should be integers within 0-4", 10, 0
+    generate_card_msg   db "Command not usable yet. Please generate a bingo card first by typing 'new'", 10, 0
 
     str_help        db "help", 0
     str_new         db "new", 0
@@ -35,6 +36,7 @@ section .data
 
     fmt_str         db "%19s", 0
     fmt_int         db "%4d %4d", 0
+    fmt_card_num    db "%1d ", 10, 0
 
     in_progress     db "This feature hasn't been implemented yet ^-^", 10, 0
 
@@ -45,7 +47,7 @@ section .bss
 section .text
     global main
     extern printf, scanf
-    extern init_card_generator, generate_bingo_card, display_bingo_card
+    extern init_card_generator, generate_bingo_card, display_bingo_card, is_valid_card, get_card_number
     extern time
     extern srand
 
@@ -177,11 +179,15 @@ cmd_new:
     jmp input_loop
 
 cmd_card:
+    call card_validation
+
     ; TODO
     call display_bingo_card
     jmp input_loop
 
 cmd_call:
+    call card_validation
+
     ; TODO
     push dword in_progress
     call printf
@@ -189,6 +195,8 @@ cmd_call:
     jmp input_loop
 
 cmd_called:
+    call card_validation
+    
     ; TODO
     push dword in_progress
     call printf
@@ -202,6 +210,7 @@ mark_invalid:
     add esp, 4
 
 cmd_mark:
+    call card_validation
     ; print user to input coordinates
     push dword marking_msg
     call printf
@@ -228,31 +237,37 @@ cmd_mark:
     cmp al, 0
     jne mark_invalid
 
-    ; If coordinate = 1 digit but greater than 5
+    ; If coordinate = 1 digit but greater than 4
     mov al, [mark_coordinates]
-    cmp al, 5
-    ja mark_invalid     ; greater than 5
+    cmp al, 4
+    ja mark_invalid     ; greater than 4
 
     mov al, [mark_coordinates+4]
-    cmp al, 5
-    ja mark_invalid     ; greater than 5
+    cmp al, 4
+    ja mark_invalid     ; greater than 4
 
-    ; If coordinate = 1 digit but value is 0
-    mov al, [mark_coordinates]
-    cmp al, 0
-    je mark_invalid
+    ; test get_card_number, just for reference, in the future, 
+    ; concatenate this with has been marked / hasn't been called msg
+    push dword [mark_coordinates]
+    push dword [mark_coordinates+4]
+    call get_card_number
+    add esp, 8
+    push eax 
+    push fmt_card_num
+    call printf
+    add esp, 8
+    
 
-    mov al, [mark_coordinates+4]
-    cmp al, 0
-    je mark_invalid
-
-    ; TODO
+    ; TODO: mark value within bingo_card function call
+    ; display marked bingo card function call
+    
     push dword in_progress
     call printf
     add esp, 4
     jmp input_loop
 
 cmd_marked:
+    call card_validation
     ; TODO
     push dword in_progress
     call printf
@@ -260,13 +275,14 @@ cmd_marked:
     jmp input_loop
 
 cmd_bingo:
+    call card_validation
     ; TODO
 
     ; LOGIC:
     ; keep playing even if naachieve na BINGO, only stop if tinype mismo BINGO
     ; and nameet niya yung BINGO condition
 
-    ; check if bingo function here
+    ; check if bingo function call here
     ; BINGO == TRUE, print win_msg
     ; BINGO != TRUE, print not_win_msg
 
@@ -285,6 +301,25 @@ exit:
     mov esp, ebp
     pop ebp
 
+    ret
+
+;-------------------------
+; BINGO CARD VALIDATOR
+;-------------------------
+
+card_validation:
+    call is_valid_card
+    cmp eax, 1
+    je .valid
+
+.not_valid:
+    push generate_card_msg
+    call printf
+    add esp, 4
+    
+    jmp input_loop
+
+.valid:
     ret
 
 ;----------------------------------------------------

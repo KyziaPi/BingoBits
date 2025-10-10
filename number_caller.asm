@@ -1,0 +1,1 @@
+; all functions for calling a random number here
