@@ -13,7 +13,7 @@
 section .data
     newline             db 10, 0
     intro               db "Welcome to BingoBits!", 10, "Type 'help' to learn how to play", 10, 0
-    commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, "'new' - generate a new board", 10, "'card' - display current card without marks", 10, "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 0
+    commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, "'new' - generate a new board", 10, "'card' - display current card without marks", 10, "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 10, 0
     new_card_msg        db "A new BINGO card has been generated!", 10, 0
     cmd_start           db "> ", 0
     invalid_msg         db "Invalid command! Type 'help' to see all the commands available.", 10, 0
@@ -22,7 +22,7 @@ section .data
     exit_msg            db "Thank you for playing! ^-^", 10, 0
     marking_msg         db "Format: [row] [col]", 10, "Mark: ", 0
     mark_error_msg      db 10, "INVALID INPUT: Row and column values should be integers within 0-4", 10, 0
-    generate_card_msg   db "Command not usable yet. Please generate a bingo card first by typing 'new'", 10, 0
+    generate_card_msg   db "Command not usable yet. Please generate a bingo card first by typing 'new'", 10, 10, 0
 
     str_help        db "help", 0
     str_new         db "new", 0
