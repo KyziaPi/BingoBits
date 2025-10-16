@@ -46,7 +46,7 @@ section .bss
 
 section .text
     global main
-    extern printf, scanf
+    extern printf, scanf, call_number
     extern init_card_generator, generate_bingo_card, display_bingo_card, is_valid_card, get_card_number
     extern time
     extern srand
@@ -187,6 +187,8 @@ cmd_card:
 
 cmd_call:
     call card_validation
+    call call_number
+    jmp input_loop
 
     ; TODO
     push dword in_progress
