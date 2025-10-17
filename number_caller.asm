@@ -78,8 +78,8 @@ display_called_numbers:
 	call printf
 	add esp, 4
 
-	mov ecx, 1
-	mov edi, 0
+	mov ecx, 1 ; start from 1
+	mov edi, 0 ; counter for formatting (new line 10 numbers)
 
 .loop:
 	cmp ecx, 76
@@ -90,44 +90,47 @@ display_called_numbers:
 	; compute letter for ecx
 	mov eax, ecx
 	dec eax
-	push edx
+	push edx ; save edx
 	xor edx, edx
 	mov ebx, 15
 	div ebx
 	mov bl, [column_letters + eax]
-	pop edx
+	pop edx ; restore edx
 
-	push ecx
-	push edi
+	; printf"(%c-%02d", letter, ecx)
+	push ecx ; save ecx
+	push edi ; save edi
 
-	; printf("%c-%02d ", letter, ecx)
+	
 	mov eax, ecx
-	push eax
-	movzx eax, bl
+	push eax ; %d argument
+	movzx eax, bl ; %c argument
 	push eax
 	push dword num_format
 	call printf
 	add esp, 12
 
-	pop edi
-	pop ecx
+	pop edi ; restore edi
+	pop ecx ; restore ecx
 
-	inc edi
-	cmp edi, 10
+	inc edi ; increment counter
+	cmp edi, 10 ; check if we have printed 10 numbers
 	jl .next
 
+	; print newline after every 10 numbers
 	push ecx
 	push dword newline
 	call printf
 	add esp, 4
 	pop ecx
-	xor edi, edi
+	xor edi, edi ; reset counter
 
 .next:
 	inc ecx
 	jmp .loop
 
 .done:
+	; print final newline if needed
 	cmp edi, 0
 	je .skip_final_newline
 	push dword newline
