@@ -20,7 +20,7 @@ section .data
 	called_count dd 0
 
 section .text
-	global call_number, display_called_numbers
+	global call_number, display_called_numbers, reset_called_numbers
 	extern rand, printf
 
 ; call number - generate and print one random number (1-75)
@@ -144,6 +144,29 @@ display_called_numbers:
 	push dword no_called_msg
 	call printf
 	add esp, 4
+	ret
+
+; reset_called_numbers - reset all called numbers
+reset_called_numbers:
+	push ebp
+	mov ebp, esp
+
+	; reset called_count to 0
+	mov dword [called_count], 0
+
+	; reset all flags to 0
+	mov ecx, 0 ; counter
+
+.reset_loop:
+	cmp ecx, 76
+	jge .done
+	mov byte [called_flags + ecx], 0
+	inc ecx
+	jmp .reset_loop
+
+.done:
+	mov esp, ebp
+	pop ebp
 	ret
 
 

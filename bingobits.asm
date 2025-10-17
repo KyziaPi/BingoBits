@@ -46,7 +46,7 @@ section .bss
 
 section .text
     global main
-    extern printf, scanf, call_number, display_called_numbers
+    extern printf, scanf, call_number, display_called_numbers, reset_called_numbers
     extern init_card_generator, generate_bingo_card, display_bingo_card, is_valid_card, get_card_number
     extern time
     extern srand
@@ -165,7 +165,10 @@ cmd_help:
     add esp, 4
     jmp input_loop
 
-cmd_new:    
+cmd_new:
+    ; reset called numbers first
+    call reset_called_numbers
+        
     ; print new card message
     push dword new_card_msg
     call printf
