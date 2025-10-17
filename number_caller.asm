@@ -1,32 +1,148 @@
+; number_caller.asm
+; generates random bingo numbers (1-75)
+; displays called number list
 ; all functions for calling a random number here
 
 section .data
-	call_msg db "Calling number: %d", 10, 0 ;format string for printf
+	; format strings
+	call_msg db "Calling number: %c-%02d", 10, 0
+	called_list_msg db "Numbers called so far:", 10, 0
+	no_called_msg db "No numbers have been called yet.", 10, 0
+	num_format db "%c-%02d ", 0
+	newline db 10, 0
 
-section .bss
-	rand_num resd 1 ;reserve space for random number
+	; column letters for Bingo
+	column_letters db "BINGO", 0
+
+	; initialized variables
+	rand_num dd 0
+	called_flags times 76 db 0
+	called_count dd 0
 
 section .text
-	global call_number ;function name to be called from main
-	extern rand, printf ;use rand() from C library
+	global call_number, display_called_numbers
+	extern rand, printf
 
+; call number - generate and print one random number (1-75)
 call_number:
-	;generate random number using rand()
+	mov eax, [called_count]
+	cmp eax, 75
+	je .all_called
+
+.generate_new:
 	call rand
-
-	;rand() returns a large integer in EAX
-	mov ebx, 75
 	xor edx, edx
-	div ebx ;EAX = quotient, EAX = remainder
-	inc edx ;make range 1-75
-	mov [rand_num], edx ;store the random number
+	mov ebx, 75
+	div ebx ; EDX = remainder (0-74)
+	inc edx ; make range 1-75
+	mov [rand_num], edx
 
-	;print it using printf
-	push dword [rand_num]
+	mov ebx, [rand_num] 
+	cmp byte [called_flags + ebx], 1
+	je .generate_new ; skip if number already called
+
+	mov byte [called_flags + ebx], + 1 ; mark as called
+	inc dword [called_count]
+
+	; compute column letter using (num - 1) / 15
+	mov eax, [rand_num]
+	dec eax
+	mov edi, 15
+	xor edx, edx
+	div edi ; eax = column index 0-4
+	mov bl, [column_letters + eax]
+
+	; print "Calling number: B-12"
+	mov eax, [rand_num]
+	push eax
+	movzx eax, bl
+	push eax
 	push dword call_msg
 	call printf
-	add esp, 8
-
+	add esp, 12
 	ret
+
+.all_called:
+	push dword no_called_msg
+	call printf
+	add esp, 4
+	ret
+
+; display_called_numbers - print all called numbers (1-75)
+display_called_numbers:
+	mov eax, [called_count]
+	cmp eax, 0
+	je .none_called
+
+	push dword called_list_msg
+	call printf
+	add esp, 4
+
+	mov ecx, 1
+	mov edi, 0
+
+.loop:
+	cmp ecx, 76
+	jge .done
+	cmp byte [called_flags + ecx], 1
+	jne .next
+
+	; compute letter for ecx
+	mov eax, ecx
+	dec eax
+	push edx
+	xor edx, edx
+	mov ebx, 15
+	div ebx
+	mov bl, [column_letters + eax]
+	pop edx
+
+	push ecx
+	push edi
+
+	; printf("%c-%02d ", letter, ecx)
+	mov eax, ecx
+	push eax
+	movzx eax, bl
+	push eax
+	push dword num_format
+	call printf
+	add esp, 12
+
+	pop edi
+	pop ecx
+
+	inc edi
+	cmp edi, 10
+	jl .next
+
+	push ecx
+	push dword newline
+	call printf
+	add esp, 4
+	pop ecx
+	xor edi, edi
+
+.next:
+	inc ecx
+	jmp .loop
+
+.done:
+	cmp edi, 0
+	je .skip_final_newline
+	push dword newline
+	call printf
+	add esp, 4
+
+.skip_final_newline:
+	ret
+
+.none_called:
+	push dword no_called_msg
+	call printf
+	add esp, 4
+	ret
+
+
 
 section .note.GNU-stack noalloc noexec nowrite progbits
