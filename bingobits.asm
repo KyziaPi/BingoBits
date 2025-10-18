@@ -183,8 +183,6 @@ cmd_new:
 
 cmd_card:
     call card_validation
-
-    ; TODO
     call display_bingo_card
     jmp input_loop
 
@@ -193,21 +191,9 @@ cmd_call:
     call call_number
     jmp input_loop
 
-    ; TODO
-    push dword in_progress
-    call printf
-    add esp, 4
-    jmp input_loop
-
 cmd_called:
     call card_validation
     call display_called_numbers
-    jmp input_loop
-    
-    ; TODO
-    push dword in_progress
-    call printf
-    add esp, 4
     jmp input_loop
 
 mark_invalid:
