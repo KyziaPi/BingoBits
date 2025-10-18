@@ -38,7 +38,7 @@ section .data
     fmt_int         db "%4d %4d", 0
     fmt_card_num    db "%1d ", 10, 0
 
-    in_progress     db "This feature hasn't been implemented yet ^-^", 10, 10, 0
+    in_progress     db "This feature hasn't been implemented yet ^-^", 10, 0
 
 section .bss
     input               resb 20
