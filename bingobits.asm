@@ -1,6 +1,6 @@
 ; bingobits.asm
 ;
-; FINAL
+; FINAL (fully connected version)
 ; nasm -f elf32 bingobits.asm -o bingobits.o
 ; nasm -f elf32 card_generator.asm -o card_generator.o
 ; nasm -f elf32 number_caller.asm -o number_caller.o
@@ -13,14 +13,17 @@
 section .data
     newline             db 10, 0
     intro               db "Welcome to BingoBits!", 10, "Type 'help' to learn how to play", 10, 0
-    commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, "'new' - generate a new board", 10, "'card' - display current card without marks", 10, "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 10, 0
+    commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, \
+    "'new' - generate a new board", 10, "'card' - display current card without marks", 10, \
+    "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, \
+    "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 10, 0
     new_card_msg        db "A new BINGO card has been generated!", 10, 0
     cmd_start           db "> ", 0
     invalid_msg         db "Invalid command! Type 'help' to see all the commands available.", 10, 0
     not_win_msg         db 10, "You haven't hit BINGO yet, keep playing.", 10, 0
     win_msg             db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
     exit_msg            db "Thank you for playing! ^-^", 10, 0
-    marking_msg         db "Format: [row] [col]", 10, "Mark: ", 0
+    marking_msg         db "Format: [col] [row]", 10, "Mark: ", 0
     mark_error_msg      db 10, "INVALID INPUT: Row and column values should be integers within 0-4", 10, 0
     generate_card_msg   db "Command not usable yet. Please generate a bingo card first by typing 'new'", 10, 10, 0
 
@@ -38,8 +41,6 @@ section .data
     fmt_int         db "%4d %4d", 0
     fmt_card_num    db "%1d ", 10, 0
 
-    in_progress     db "This feature hasn't been implemented yet ^-^", 10, 0
-
 section .bss
     input               resb 20
     mark_coordinates    resb 8
@@ -48,8 +49,8 @@ section .text
     global main
     extern printf, scanf, call_number, display_called_numbers, reset_called_numbers
     extern init_card_generator, generate_bingo_card, display_bingo_card, is_valid_card, get_card_number
-    extern time
-    extern srand
+    extern time, srand
+    extern init_marker, mark_position, display_marked_card, check_bingo
 
 main:
     push ebp
@@ -65,7 +66,7 @@ main:
     add esp, 4
 
     call init_card_generator
-    
+
     ; Print intro
     push dword intro
     call printf
@@ -86,7 +87,7 @@ input_loop:
     call scanf
     add esp, 8
 
-    ; compare input to 'help'
+    ; compare input
     mov esi, input
     mov edi, str_help
     call str_cmp
@@ -157,7 +158,7 @@ input_loop:
 
 ;----------------------
 ; COMMAND HANDLERS
-;---------------------- 
+;----------------------
 cmd_help:
     ; print commands
     push dword commands
@@ -166,10 +167,6 @@ cmd_help:
     jmp input_loop
 
 cmd_new:
-    ; reset called numbers first
-    call reset_called_numbers
-        
-    ; print new card message
     push dword new_card_msg
     call printf
     add esp, 4
@@ -177,8 +174,9 @@ cmd_new:
     call generate_bingo_card
     call display_bingo_card
 
-    ; initialize marker here
-
+    ; initialize marker and reset called numbers
+    call init_marker
+    call reset_called_numbers
     jmp input_loop
 
 cmd_card:
@@ -201,10 +199,11 @@ mark_invalid:
     push dword mark_error_msg
     call printf
     add esp, 4
+    jmp input_loop
 
 cmd_mark:
     call card_validation
-    ; print user to input coordinates
+
     push dword marking_msg
     call printf
     add esp, 4
@@ -218,68 +217,49 @@ cmd_mark:
     call scanf
     add esp, 12
 
-    ; [mark_coordinates] = row value
-    ; [mark_coordinates + 4] = col value
+    ; [mark_coordinates] = row value (4 bytes)
+    ; [mark_coordinates + 4] = col value (4 bytes)
 
-    ; If coordinate = more than 1 digit
-    mov al, [mark_coordinates+1]
-    cmp al, 0
-    jne mark_invalid
+    ; Validate row (0-4)
+    mov eax, [mark_coordinates]
+    cmp eax, 4
+    ja mark_invalid
 
-    mov al, [mark_coordinates+5]
-    cmp al, 0
-    jne mark_invalid
+    ; Validate col (0-4)
+    mov eax, [mark_coordinates + 4]
+    cmp eax, 4
+    ja mark_invalid
 
-    ; If coordinate = 1 digit but greater than 4
-    mov al, [mark_coordinates]
-    cmp al, 4
-    ja mark_invalid     ; greater than 4
-
-    mov al, [mark_coordinates+4]
-    cmp al, 4
-    ja mark_invalid     ; greater than 4
-
-    ; test get_card_number, just for reference, in the future, 
-    ; concatenate this with has been marked / hasn't been called msg
-    push dword [mark_coordinates]
-    push dword [mark_coordinates+4]
-    call get_card_number
+    ; Mark the card at [row][col]
+    ; Parameters are pushed in reverse order: row then col
+    push dword [mark_coordinates ]   ; row (will be at ebp+8)
+    push dword [mark_coordinates + 4]       ; col (will be at ebp+12)
+    call mark_position
     add esp, 8
-    push eax 
-    push fmt_card_num
-    call printf
-    add esp, 8
-    
 
-    ; TODO: mark value within bingo_card function call
-    ; display marked bingo card function call
-    
-    push dword in_progress
-    call printf
-    add esp, 4
+    ; Display the marked card
+    call display_marked_card
+
     jmp input_loop
 
 cmd_marked:
     call card_validation
-    ; TODO
-    push dword in_progress
-    call printf
-    add esp, 4
+    call display_marked_card
     jmp input_loop
 
 cmd_bingo:
     call card_validation
-    ; TODO
+    call check_bingo
+    cmp eax, 1
+    je player_wins
 
-    ; LOGIC:
-    ; keep playing even if naachieve na BINGO, only stop if tinype mismo BINGO
-    ; and nameet niya yung BINGO condition
+    push dword not_win_msg
+    call printf
+    add esp, 4
+    jmp input_loop
 
-    ; check if bingo function call here
-    ; BINGO == TRUE, print win_msg
-    ; BINGO != TRUE, print not_win_msg
-
-    push dword in_progress
+player_wins:
+    push dword win_msg
     call printf
     add esp, 4
     jmp input_loop
@@ -289,7 +269,7 @@ exit:
     call printf
     add esp, 4
 
-    ; Exit
+
     mov eax, 0
     mov esp, ebp
     pop ebp
@@ -321,23 +301,21 @@ card_validation:
 ;----------------------------------------------------
 
 str_cmp:
-    xor eax, eax            ; clear EAX
-
+    xor eax, eax
 .next_char:
-    mov al, [esi]           ; load byte from input
-    mov bl, [edi]           ; load byte from target
+    mov al, [esi]
+    mov bl, [edi]
     cmp al, bl
     jne .not_equal
     cmp al, 0
-    je .equal               ; both equal to 0 (null-terminator)
+    je .equal
     inc esi
     inc edi
     jmp .next_char
-
+    
 .not_equal:
     mov eax, 1
-    ret 
-
+    ret
 .equal:
     xor eax, eax
     ret
