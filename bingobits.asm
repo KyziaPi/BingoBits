@@ -16,14 +16,13 @@ section .data
     commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, \
     "'new' - generate a new board", 10, "'card' - display current card without marks", 10, \
     "'marked' - display the card with marks", 10, "'call' - call a number", 10, "'called' - display all called numbers", 10, \
-    "'mark' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 10, 0
+    "'mark [col] [row]' - mark the board", 10, "'BINGO' - check if you won", 10, "'exit' - quit the game (progress won't be saved)", 10, 10, 0
     new_card_msg        db "A new BINGO card has been generated!", 10, 0
     cmd_start           db "> ", 0
     invalid_msg         db "Invalid command! Type 'help' to see all the commands available.", 10, 0
     not_win_msg         db 10, "You haven't hit BINGO yet, keep playing.", 10, 0
     win_msg             db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
     exit_msg            db "Thank you for playing! ^-^", 10, 0
-    marking_msg         db "Format: [col] [row]", 10, "Mark: ", 0
     mark_error_msg      db 10, "INVALID INPUT: Row and column values should be integers within 0-4", 10, 0
     generate_card_msg   db "Command not usable yet. Please generate a bingo card first by typing 'new'", 10, 10, 0
 
@@ -204,10 +203,6 @@ mark_invalid:
 cmd_mark:
     call card_validation
 
-    push dword marking_msg
-    call printf
-    add esp, 4
-
     ; Scan coordinates input
     lea eax, [mark_coordinates]
     push dword eax
@@ -236,9 +231,6 @@ cmd_mark:
     push dword [mark_coordinates + 4]       ; col (will be at ebp+12)
     call mark_position
     add esp, 8
-
-    ; Display the marked card
-    call display_marked_card
 
     jmp input_loop
 

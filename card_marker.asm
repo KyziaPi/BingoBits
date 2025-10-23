@@ -112,6 +112,9 @@ mark_position:
     call printf
     add esp, 16
     
+    ; Display the marked card
+    call display_marked_card
+    
     xor eax, eax            ; Return 0 for success
     jmp .done
     
