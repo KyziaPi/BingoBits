@@ -105,8 +105,8 @@ mark_position:
     mov byte [marked_card + ecx], 1
     
     ; Print success message
-    push ebx                ; col
-    push dword [ebp + 12]   ; row
+    push dword [ebp + 12]   ; col
+    push ebx                ; row
     push esi                ; number
     push mark_success_msg
     call printf

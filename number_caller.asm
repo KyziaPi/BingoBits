@@ -8,6 +8,7 @@ section .data
     call_msg db "Calling number: %c-%02d", 10, 0
     called_list_msg db "Numbers called so far:", 10, 0
     no_called_msg db "No numbers have been called yet.", 10, 0
+    all_called_msg db "All numbers have been called.", 10, 0
     num_format db "%c-%02d ", 0
     newline db 10, 0
 
@@ -66,7 +67,7 @@ call_number:
     ret
 
 .all_called:
-    push dword no_called_msg
+    push dword all_called_msg
     call printf
     add esp, 4
     ret

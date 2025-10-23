@@ -53,6 +53,7 @@ section .text
     extern printf
     extern rand
     global generate_bingo_card
+    global clear_bingo_card
     global display_bingo_card
     global init_card_generator
     global get_card_number
@@ -590,6 +591,26 @@ validate_done:
 get_card_array:
     ; Return pointer to the card array in eax
     mov eax, bingo_card
+    ret
+
+clear_bingo_card:
+    ; Set all card values to 0
+    ; Useful when player wins to prevent further marking
+    push ecx
+    push edi
+    
+    mov ecx, 25                 ; 25 positions to clear
+    mov edi, bingo_card         ; Point to card array
+    xor eax, eax                ; eax = 0
+    
+clear_card_loop:
+    mov [edi], eax              ; Set current position to 0
+    add edi, 4                  ; Move to next 32-bit position
+    dec ecx                     ; Decrease counter
+    jnz clear_card_loop         ; Continue if not zero
+    
+    pop edi
+    pop ecx
     ret
 
 display_bingo_card:

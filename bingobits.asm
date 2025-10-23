@@ -11,7 +11,6 @@
 ;
 
 section .data
-    newline             db 10, 0
     intro               db "Welcome to BingoBits!", 10, "Type 'help' to learn how to play", 10, 0
     commands            db "Commands:", 10, "'help' - shows commands to play the game", 10, \
     "'new' - generate a new board", 10, "'card' - display current card without marks", 10, \
@@ -20,7 +19,7 @@ section .data
     new_card_msg        db "A new BINGO card has been generated!", 10, 0
     cmd_start           db "> ", 0
     invalid_msg         db "Invalid command! Type 'help' to see all the commands available.", 10, 0
-    not_win_msg         db 10, "You haven't hit BINGO yet, keep playing.", 10, 0
+    not_win_msg         db "You haven't hit BINGO yet, keep playing.", 10, 0
     win_msg             db 10, "BINGO!!! You win!", 10, 10, "Type 'new' to play again or type 'exit' to quit.", 10, 0
     exit_msg            db "Thank you for playing! ^-^", 10, 0
     mark_error_msg      db 10, "INVALID INPUT: Row and column values should be integers within 0-4", 10, 0
@@ -47,7 +46,7 @@ section .bss
 section .text
     global main
     extern printf, scanf, call_number, display_called_numbers, reset_called_numbers
-    extern init_card_generator, generate_bingo_card, display_bingo_card, is_valid_card, get_card_number
+    extern init_card_generator, generate_bingo_card, display_bingo_card, is_valid_card, get_card_number, clear_bingo_card
     extern time, srand
     extern init_marker, mark_position, display_marked_card, check_bingo
 
@@ -254,6 +253,7 @@ player_wins:
     push dword win_msg
     call printf
     add esp, 4
+    call clear_bingo_card
     jmp input_loop
 
 exit:
